@@ -1,7 +1,16 @@
 import { prisma } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+type ParamsContext = {
+  params: {
+    id: string;
+  };
+};
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: ParamsContext
+): Promise<NextResponse> {
   try {
     const { id } = params;
 
@@ -11,6 +20,9 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to delete project" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to delete project" },
+      { status: 500 }
+    );
   }
 }
