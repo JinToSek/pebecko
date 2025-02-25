@@ -7,13 +7,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Image from "next/image";
 
 const loginSchema = z.object({
-  code: z.string().min(1, "Code is required"),
+  code: z.string().min(1, "Kód je povinný"),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
 
 const voteSchema = z.object({
-  projectIds: z.array(z.string()).min(1, "Select at least 1 project").max(3, "You can select up to 3 projects"),
+  projectIds: z.array(z.string()).min(1, "Vyberte alespoň 1 projekt").max(3, "Můžete vybrat maximálně 3 projekty"),
 });
 
 type VoteForm = z.infer<typeof voteSchema>;
@@ -88,7 +88,7 @@ export default function Home() {
         setCodes(codesData);
       }
     } catch (error) {
-      setError("An error occurred");
+      setError("Došlo k chybě");
     }
   };
 
@@ -113,7 +113,7 @@ export default function Home() {
         return;
       }
 
-      setSuccess("Vote submitted successfully!");
+      setSuccess("Hlas byl úspěšně odeslán!");
       setError("");
       setTimeout(() => {
         setIsLoggedIn(false);
@@ -122,7 +122,7 @@ export default function Home() {
         voteForm.reset();
       }, 2000);
     } catch (error) {
-      setError("An error occurred");
+      setError("Došlo k chybě");
     }
   };
 
@@ -149,7 +149,7 @@ export default function Home() {
       setProjects(projectsData);
       setError("");
     } catch (error) {
-      setError("An error occurred");
+      setError("Došlo k chybě");
     }
   };
 
@@ -171,7 +171,7 @@ export default function Home() {
       setSuccess(`Created ${codes.length} new codes`);
       setTimeout(() => setSuccess(""), 2000);
     } catch (error) {
-      setError("An error occurred");
+      setError("Došlo k chybě");
     }
   };
 
@@ -198,7 +198,7 @@ export default function Home() {
       setSuccess("Project deleted successfully");
       setTimeout(() => setSuccess(""), 2000);
     } catch (error) {
-      setError("An error occurred");
+      setError("Došlo k chybě");
     }
   };
 
@@ -223,7 +223,7 @@ export default function Home() {
       setSuccess("Code disabled successfully");
       setTimeout(() => setSuccess(""), 2000);
     } catch (error) {
-      setError("An error occurred");
+      setError("Došlo k chybě");
     }
   };
 
@@ -234,7 +234,7 @@ export default function Home() {
       <div className="min-h-screen flex items-center justify-center bg-black">
         <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg">
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Enter your code
+            Pébéčko 2025
           </h2>
           <form onSubmit={loginForm.handleSubmit(handleLogin)} className="mt-8 space-y-6">
             <div>
@@ -246,7 +246,7 @@ export default function Home() {
                 type="text"
                 {...loginForm.register("code")}
                 className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Enter your code"
+                placeholder="Zadejte svůj kód"
               />
             </div>
             {error && <p className="text-red-500 text-sm">{error}</p>}
@@ -254,7 +254,7 @@ export default function Home() {
               type="submit"
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
-              Submit
+              Potvrdit
             </button>
           </form>
         </div>
@@ -266,7 +266,7 @@ export default function Home() {
     return (
       <div className="min-h-screen p-8 bg-black">
         <div className="max-w-6xl mx-auto space-y-8">
-          <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
+          <h1 className="text-3xl font-bold text-white">Administrátorský panel</h1>
           
           {/* Projects section
           <div className="bg-white p-6 rounded-lg shadow">
@@ -378,7 +378,7 @@ export default function Home() {
                           const codesData = await codesResponse.json();
                           setCodes(codesData);
                         } catch (error) {
-                          setError("An error occurred");
+                          setError("Došlo k chybě");
                         }
                       };
                       generateCodes(count);
@@ -449,7 +449,7 @@ export default function Home() {
   return (
     <div className="min-h-screen p-8 bg-black">
       <div className="max-w-2xl mx-auto space-y-8">
-        <h1 className="text-3xl font-bold text-center text-white">Vote for Projects</h1>
+        <h1 className="text-3xl font-bold text-center text-white">Hlasování pro projekty</h1>
         <form onSubmit={voteForm.handleSubmit(handleVote)} className="space-y-6">
           <div className="space-y-4">
             {projects.map((project) => (
@@ -480,7 +480,7 @@ export default function Home() {
               type="submit"
               className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
-              Submit Vote
+              Odeslat hlas
             </button>
           )}
         </form>

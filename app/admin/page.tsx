@@ -66,7 +66,7 @@ export default function AdminPage() {
         setProjects(projectsData);
         setCodes(codesData);
       } catch (error) {
-        setError("Failed to load admin data");
+        setError("Nepodařilo se načíst administrátorská data");
         router.push('/');
       }
     };
@@ -106,11 +106,11 @@ export default function AdminPage() {
       const projectsResponse = await fetch("/api/project");
       const projectsData = await projectsResponse.json();
       setProjects(projectsData);
-      setSuccess("Project created successfully!");
+      setSuccess("Projekt byl úspěšně vytvořen!");
       setError("");
       (event.target as HTMLFormElement).reset();
     } catch (error) {
-      setError("Failed to create project");
+      setError("Nepodařilo se vytvořit projekt");
     }
   };
 
@@ -139,10 +139,10 @@ export default function AdminPage() {
       const projectsResponse = await fetch("/api/project");
       const projectsData = await projectsResponse.json();
       setProjects(projectsData);
-      setSuccess("Project deleted successfully!");
+      setSuccess("Projekt byl úspěšně smazán!");
       setError("");
     } catch (error) {
-      setError("Failed to delete project");
+      setError("Nepodařilo se smazat projekt");
     }
   };
 
@@ -181,11 +181,11 @@ export default function AdminPage() {
       });
       const codesData = await codesResponse.json();
       setCodes(codesData);
-      setSuccess("Code created successfully!");
+      setSuccess("Kód byl úspěšně vytvořen!");
       setError("");
       (event.target as HTMLFormElement).reset();
     } catch (error) {
-      setError("Failed to create code");
+      setError("Nepodařilo se vytvořit kód");
     }
   };
 
@@ -225,11 +225,11 @@ export default function AdminPage() {
       });
       const codesData = await codesResponse.json();
       setCodes(codesData);
-      setSuccess(`${codesList.length} codes created successfully!`);
+      setSuccess(`${codesList.length} kódů bylo úspěšně vytvořeno!`);
       setError("");
       (event.target as HTMLFormElement).reset();
     } catch (error) {
-      setError("Failed to create codes");
+      setError("Nepodařilo se vytvořit kódy");
     }
   };
 
@@ -281,7 +281,7 @@ export default function AdminPage() {
       document.body.removeChild(a);
   
       setError("");
-      setSuccess(`Generated ${count} codes and downloaded`);
+      setSuccess(`Vygenerováno ${count} kódů a staženo`);
       setTimeout(() => setSuccess(""), 2000);
   
       // Refresh codes list
@@ -289,23 +289,23 @@ export default function AdminPage() {
       const codesData = await codesResponse.json();
       setCodes(codesData);
     } catch (error) {
-      setError("An error occurred");
+      setError("Došlo k chybě");
     }
   };
 
   return (
     <div className="min-h-screen bg-background text-foreground p-8">
-      <h1 className="text-4xl font-bold mb-8">Admin Dashboard</h1>
+      <h1 className="text-4xl font-bold mb-8">Administrátorský panel</h1>
 
       {error && <div className="bg-red-100 text-red-700 p-4 rounded mb-4">{error}</div>}
       {success && <div className="bg-green-100 text-green-700 p-4 rounded mb-4">{success}</div>}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
-          <h2 className="text-2xl font-bold mb-4">Projects</h2>
+          <h2 className="text-2xl font-bold mb-4">Projekty</h2>
           <form onSubmit={handleCreateProject} className="bg-white/5 p-4 rounded mb-4">
             <div className="mb-4">
-              <label htmlFor="name" className="block mb-2">Name</label>
+              <label htmlFor="name" className="block mb-2">Název</label>
               <input
                 type="text"
                 id="name"
@@ -315,7 +315,7 @@ export default function AdminPage() {
               />
             </div>
             <div className="mb-4">
-              <label htmlFor="description" className="block mb-2">Description</label>
+              <label htmlFor="description" className="block mb-2">Popis</label>
               <textarea
                 id="description"
                 name="description"
@@ -323,7 +323,7 @@ export default function AdminPage() {
               />
             </div>
             <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">
-              Create Project
+              Vytvořit projekt
             </button>
           </form>
 
@@ -333,13 +333,13 @@ export default function AdminPage() {
                 <div>
                   <h3 className="font-bold">{project.name}</h3>
                   {project.description && <p className="text-sm opacity-70">{project.description}</p>}
-                  <p className="text-sm">Votes: {project._count.votes}</p>
+                  <p className="text-sm">Tento projekt získal <b>{project._count.votes}</b> hlasy/ů.</p>
                 </div>
                 <button
                   onClick={() => handleDeleteProject(project.id)}
                   className="bg-red-500 text-white px-3 py-1 rounded"
                 >
-                  Delete
+                  Smazat
                 </button>
               </div>
             ))}
@@ -347,10 +347,10 @@ export default function AdminPage() {
         </div>
 
         <div>
-          <h2 className="text-2xl font-bold mb-4">Codes</h2>
+          <h2 className="text-2xl font-bold mb-4">Kódy</h2>
           <form onSubmit={handleCreateCode} className="bg-white/5 p-4 rounded mb-4">
             <div className="mb-4">
-              <label htmlFor="code" className="block mb-2">Single Code</label>
+              <label htmlFor="code" className="block mb-2">Jednotlivý kód</label>
               <input
                 type="text"
                 id="code"
@@ -360,13 +360,13 @@ export default function AdminPage() {
               />
             </div>
             <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">
-              Create Code
+              Vytvořit kód
             </button>
           </form>
 
           <form onSubmit={handleCreateBulkCodes} className="bg-white/5 p-4 rounded mb-4">
             <div className="mb-4">
-              <label htmlFor="codes" className="block mb-2">Bulk Codes (one per line)</label>
+              <label htmlFor="codes" className="block mb-2">Hromadné kódy (jeden na řádek)</label>
               <textarea
                 id="codes"
                 name="codes"
@@ -375,19 +375,19 @@ export default function AdminPage() {
               />
             </div>
             <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">
-              Create Bulk Codes
+              Vytvořit hromadné kódy
             </button>
           </form>
 
           <form className="bg-white/5 p-4 rounded mb-4">
             <div className="mb-4">
-              <label htmlFor="codeCount" className="block mb-2">Generate Random Codes</label>
+              <label htmlFor="codeCount" className="block mb-2">Generovat náhodné kódy</label>
               <div className="flex gap-4">
                 <input
                   type="number"
                   id="codeCount"
                   min="1"
-                  placeholder="Number of codes to generate"
+                  placeholder="Počet kódů ke generování"
                   className="flex-1 p-2 rounded bg-white/10"
                 />
                 <button
@@ -398,7 +398,7 @@ export default function AdminPage() {
                   }}
                   className="bg-blue-500 text-white px-4 py-2 rounded"
                 >
-                  Generate
+                  Generovat
                 </button>
               </div>
             </div>
@@ -415,7 +415,7 @@ export default function AdminPage() {
               >
                 <code>{code.code}</code>
                 {code.disabled ? (
-                  <span className="ml-2 text-sm opacity-70">(Used)</span>
+                  <span className="ml-2 text-sm opacity-70">(Použito)</span>
                 ) : (
                   <button
                     onClick={() => {
@@ -444,7 +444,7 @@ export default function AdminPage() {
                     }}
                     className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm"
                   >
-                    Mark as Used
+                    Označit jako použitý
                   </button>
                 )}
               </div>
