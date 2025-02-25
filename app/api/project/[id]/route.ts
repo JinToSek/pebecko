@@ -1,16 +1,7 @@
 import { prisma } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 
-type ParamsContext = {
-  params: {
-    id: string;
-  };
-};
-
-export async function DELETE(
-  req: NextRequest,
-  { params }: ParamsContext
-): Promise<NextResponse> {
+export async function DELETE(req: NextRequest, { params }) {
   try {
     const { id } = params;
 
