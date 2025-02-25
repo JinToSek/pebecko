@@ -1,19 +1,12 @@
 import { prisma } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 
-type Props = {
-  params: { id: string }
-}
-
-export async function DELETE(
-  req: NextRequest,
-  props: Props
-): Promise<NextResponse> {
+export async function DELETE(req: NextRequest): Promise<NextResponse> {
   try {
-    const { id } = props.params;
+    const { id } = req.query; // Assuming 'id' is being passed as a query parameter
 
     await prisma.project.delete({
-      where: { id },
+      where: { id: String(id) },
     });
 
     return NextResponse.json({ success: true });
