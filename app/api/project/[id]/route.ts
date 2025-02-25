@@ -1,12 +1,16 @@
 import { prisma } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 
+type Props = {
+  params: { id: string }
+}
+
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  props: Props
 ): Promise<NextResponse> {
   try {
-    const { id } = params;
+    const { id } = props.params;
 
     await prisma.project.delete({
       where: { id },
