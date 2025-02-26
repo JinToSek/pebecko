@@ -333,7 +333,7 @@ export default function AdminPage() {
                 <div>
                   <h3 className="font-bold">{project.name}</h3>
                   {project.description && <p className="text-sm opacity-70">{project.description}</p>}
-                  <p className="text-sm">Tento projekt získal <b>{project._count.votes}</b> hlasy/ů.</p>
+                  <p className="text-sm">Votes: {project._count.votes}</p>
                 </div>
                 <button
                   onClick={() => handleDeleteProject(project.id)}
