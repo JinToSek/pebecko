@@ -1,8 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import { authenticateAdmin } from '../../middleware';
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { authenticateAdmin } from "../../middleware";
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+type Params = Promise<{ id: string }>
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Params }
+) {
   // Authenticate admin
   const authResult = await authenticateAdmin(req);
   if (authResult) {
@@ -10,14 +15,17 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   }
 
   try {
-    const { id } = params;
+    const { id } = await params;
 
     await prisma.project.delete({
-      where: { id }
+      where: { id },
     });
 
     return NextResponse.json({ message: "Project deleted successfully" });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to delete project" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to delete project" },
+      { status: 500 }
+    );
   }
 }
