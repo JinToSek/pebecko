@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { prisma } from "@/lib/db";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function authenticateAdmin(req: NextRequest) {
   const code = req.headers.get("x-auth-code");
@@ -24,20 +24,5 @@ export async function authenticateAdmin(req: NextRequest) {
     return null; // Authentication successful
   } catch (error) {
     return NextResponse.json({ error: "Authentication failed" }, { status: 500 });
-  }
-}
-
-export async function authenticateUser(req: NextRequest) {
-  const code = req.headers.get('x-auth-code');
-  if (!code) return false;
-
-  try {
-    const codeRecord = await prisma.code.findFirst({
-      where: { code: code }
-    });
-    return codeRecord !== null;
-  } catch (error) {
-    console.error('Authentication error:', error);
-    return false;
   }
 }

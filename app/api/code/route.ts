@@ -1,33 +1,16 @@
-import { prisma } from "@/lib/db";
-import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
-import { authenticateAdmin } from "../middleware";
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
+import { authenticateAdmin, authenticateUser } from '../middleware';
 
-const validateCodeSchema = z.object({
-  code: z.string().min(1),
-});
+export async function GET(req: NextRequest) {
+  // Authenticate admin
+  const authResult = await authenticateAdmin(req);
+  if (authResult !== null) {
+    return authResult;
+  }
 
-const submitVoteSchema = z.object({
-  code: z.string().min(1),
-  projectIds: z.array(z.string()).min(1).max(3),
-});
-
-const createCodeSchema = z.object({
-  code: z.string().min(1),
-});
-
-const createBulkCodesSchema = z.object({
-  codes: z.array(z.string().min(1)).min(1),
-});
-
-export async function GET() {
   try {
-    const codes = await prisma.code.findMany({
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
-
+    const codes = await prisma.code.findMany();
     return NextResponse.json(codes);
   } catch (error) {
     return NextResponse.json({ error: "Failed to fetch codes" }, { status: 500 });
@@ -36,96 +19,143 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { code } = validateCodeSchema.parse(body);
+    const { code } = await req.json();
+
+    if (!code) {
+      return NextResponse.json({ error: "Code is required" }, { status: 400 });
+    }
 
     const codeRecord = await prisma.code.findUnique({
-      where: { code },
+      where: { code }
     });
 
-    if (!codeRecord) {
-      return NextResponse.json({ error: "Invalid code" }, { status: 400 });
+    if (!codeRecord || codeRecord.disabled) {
+      return NextResponse.json({ error: "Invalid or disabled code" }, { status: 401 });
     }
 
-    if (codeRecord.disabled) {
-      return NextResponse.json({ error: "Code is disabled" }, { status: 400 });
-    }
-
-    return NextResponse.json({
-      id: codeRecord.id,
-      isAdmin: codeRecord.isAdmin
-    });
+    return NextResponse.json({ isAdmin: codeRecord.isAdmin });
   } catch (error) {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    return NextResponse.json({ error: "Failed to verify code" }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  // Authenticate admin
+  const authResult = await authenticateAdmin(req);
+  if (authResult) {
+    return authResult;
+  }
+
+  try {
+    const { code } = await req.json();
+
+    if (!code) {
+      return NextResponse.json({ error: "Code is required" }, { status: 400 });
+    }
+
+    // Check if code already exists
+    const existingCode = await prisma.code.findUnique({
+      where: { code }
+    });
+
+    if (existingCode) {
+      return NextResponse.json({ error: "Code already exists" }, { status: 400 });
+    }
+
+    const newCode = await prisma.code.create({
+      data: {
+        code,
+        isAdmin: false,
+        disabled: false
+      }
+    });
+
+    return NextResponse.json(newCode);
+  } catch (error) {
+    return NextResponse.json({ error: "Failed to create code" }, { status: 500 });
   }
 }
 
 export async function PUT(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { code, projectIds } = submitVoteSchema.parse(body);
+    const { code, projectIds } = await req.json();
+
+    if (!code) {
+      return NextResponse.json({ error: "Code is required" }, { status: 400 });
+    }
+
+    if (!projectIds || !Array.isArray(projectIds) || projectIds.length === 0) {
+      return NextResponse.json({ error: "At least one project must be selected" }, { status: 400 });
+    }
+
+    if (projectIds.length > 3) {
+      return NextResponse.json({ error: "Maximum 3 projects can be selected" }, { status: 400 });
+    }
 
     const codeRecord = await prisma.code.findUnique({
       where: { code },
+      include: { votes: true }
     });
 
     if (!codeRecord || codeRecord.disabled) {
-      return NextResponse.json({ error: "Invalid or disabled code" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid or disabled code" }, { status: 401 });
     }
 
-    // Create votes and disable the code in a transaction
-    await prisma.$transaction(async (tx: { vote: { createMany: (arg0: { data: { codeId: any; projectId: string; }[]; }) => any; }; code: { update: (arg0: { where: { id: any; }; data: { disabled: boolean; }; }) => any; }; }) => {
-      await tx.vote.createMany({
-        data: projectIds.map((projectId) => ({
-          codeId: codeRecord.id,
-          projectId,
-        })),
-      });
+    if (codeRecord.votes.length > 0) {
+      return NextResponse.json({ error: "Code has already been used to vote" }, { status: 400 });
+    }
 
-      await tx.code.update({
+    // Create votes for each project
+    await prisma.$transaction([
+      ...projectIds.map(projectId =>
+        prisma.vote.create({
+          data: {
+            projectId,
+            codeId: codeRecord.id
+          }
+        })
+      ),
+      prisma.code.update({
         where: { id: codeRecord.id },
-        data: { disabled: true },
-      });
-    });
+        data: { disabled: true }
+      })
+    ]);
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ message: "Vote recorded successfully" });
   } catch (error) {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
-  }
-}
-
-export async function PATCH(req: NextRequest) {
-  try {
-    const authError = await authenticateAdmin(req);
-    if (authError) return authError;
-
-    const body = await req.json();
-    const { code } = createCodeSchema.parse(body);
-
-    const newCode = await prisma.code.create({
-      data: { code },
-    });
-
-    return NextResponse.json(newCode);
-  } catch (error) {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    return NextResponse.json({ error: "Failed to record vote" }, { status: 500 });
   }
 }
 
 export async function DELETE(req: NextRequest) {
+  // Authenticate admin
+  const authResult = await authenticateAdmin(req);
+  if (authResult) {
+    return authResult;
+  }
+
   try {
-    const authError = await authenticateAdmin(req);
-    if (authError) return authError;
+    const { codes } = await req.json();
 
-    const body = await req.json();
-    const { codes } = createBulkCodesSchema.parse(body);
+    if (!codes || !Array.isArray(codes) || codes.length === 0) {
+      return NextResponse.json({ error: "At least one code is required" }, { status: 400 });
+    }
 
-    const newCodes = await prisma.code.createMany({
-      data: codes.map((code) => ({ code })),
-    });
+    // Create all codes in bulk
+    const createdCodes = await prisma.$transaction(
+      codes.map(code =>
+        prisma.code.create({
+          data: {
+            code,
+            isAdmin: false,
+            disabled: false
+          }
+        })
+      )
+    );
 
-    return NextResponse.json({ count: newCodes.count });
+    return NextResponse.json({ message: "Codes created successfully", codes: createdCodes });
   } catch (error) {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    return NextResponse.json({ error: "Failed to create codes" }, { status: 500 });
   }
 }

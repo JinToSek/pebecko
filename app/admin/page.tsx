@@ -38,6 +38,11 @@ export default function AdminPage() {
           body: JSON.stringify({ code }),
         });
 
+        if (!verifyResponse.ok) {
+          const errorData = await verifyResponse.json();
+          throw new Error(errorData.error || `Verification failed with status: ${verifyResponse.status}`);
+        }
+
         const verifyResult = await verifyResponse.json();
         if (!verifyResult.isAdmin) {
           router.push('/');
@@ -60,14 +65,31 @@ export default function AdminPage() {
           }),
         ]);
 
+        if (!projectsResponse.ok || !codesResponse.ok) {
+          let errorMessage = 'Failed to fetch data';
+          try {
+            if (!projectsResponse.ok) {
+              const projectError = await projectsResponse.json();
+              errorMessage = projectError.error || errorMessage;
+            }
+            if (!codesResponse.ok) {
+              const codeError = await codesResponse.json();
+              errorMessage = codeError.error || errorMessage;
+            }
+          } catch (e) {
+            console.error('Error parsing response:', e);
+          }
+          throw new Error(errorMessage);
+        }
+
         const projectsData = await projectsResponse.json();
         const codesData = await codesResponse.json();
 
         setProjects(projectsData);
         setCodes(codesData);
-      } catch (error) {
-        setError("Nepodařilo se načíst administrátorská data");
-        router.push('/');
+      } catch (error : any) {
+        setError("Nepodařilo se načíst administrátorská data: "+error.toString());
+        // router.push('/');
       }
     };
 
@@ -103,7 +125,12 @@ export default function AdminPage() {
         return;
       }
 
-      const projectsResponse = await fetch("/api/project");
+      const projectsResponse = await fetch("/api/project", {
+        headers: {
+          "Content-Type": "application/json",
+          "x-auth-code": code
+        }
+      });
       const projectsData = await projectsResponse.json();
       setProjects(projectsData);
       setSuccess("Projekt byl úspěšně vytvořen!");
@@ -115,8 +142,13 @@ export default function AdminPage() {
   };
 
   const handleDeleteProject = async (id: string) => {
-
     try {
+      if (!confirm("Opravdu chcete smazat tento projekt? Toto také smaže všechny hlasy pro tento projekt.")) {
+        setSuccess("Akce byla úspěšně zrušena.");
+        setTimeout(() => setSuccess(""), 2000);
+        return;
+      }
+
       const code = localStorage.getItem('adminCode');
       if (!code) {
         router.push('/');
@@ -126,6 +158,7 @@ export default function AdminPage() {
       const response = await fetch(`/api/project/${id}`, {
         method: "DELETE",
         headers: {
+          "Content-Type": "application/json",
           "x-auth-code": code
         },
       });
@@ -136,11 +169,16 @@ export default function AdminPage() {
         return;
       }
 
-      const projectsResponse = await fetch("/api/project");
+      const projectsResponse = await fetch("/api/project", {
+        headers: {
+          "x-auth-code": code
+        }
+      });
       const projectsData = await projectsResponse.json();
       setProjects(projectsData);
       setSuccess("Projekt byl úspěšně smazán!");
       setError("");
+      setTimeout(() => setSuccess(""), 2000);
     } catch (error) {
       setError("Nepodařilo se smazat projekt");
     }
@@ -234,7 +272,6 @@ export default function AdminPage() {
   };
 
   const generateCodes = async (count: number) => {
-
     try {
       // Generate unique codes
       const generatedCodes = new Set<string>();
@@ -245,32 +282,34 @@ export default function AdminPage() {
         }).join('');
         generatedCodes.add(code);
       }
-  
-      const codes = Array.from(generatedCodes);
-  
-      const code = localStorage.getItem('adminCode');
-      if (!code) {
+
+      const genCodes = Array.from(generatedCodes);
+      const adminCode = localStorage.getItem('adminCode');
+      if (!adminCode) {
         router.push('/');
         return;
       }
 
-      const response = await fetch("/api/code", {
-        method: "DELETE",
-        headers: { 
-          "Content-Type": "application/json",
-          "x-auth-code": code
-        },
-        body: JSON.stringify({ codes }),
-      });
-  
-      if (!response.ok) {
-        const error = await response.json();
-        setError(error.message);
-        return;
+      // Create codes one by one using PATCH method
+      for (const codeValue of genCodes) {
+        const response = await fetch("/api/code", {
+          method: "PATCH",
+          headers: { 
+            "Content-Type": "application/json",
+            "x-auth-code": adminCode
+          },
+          body: JSON.stringify({ code: codeValue }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          setError(error.message);
+          return;
+        }
       }
   
       // Create a blob with the codes
-      const blob = new Blob([codes.join("\n")], { type: "text/plain" });
+      const blob = new Blob([genCodes.join("\n")], { type: "text/plain" });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -285,11 +324,58 @@ export default function AdminPage() {
       setTimeout(() => setSuccess(""), 2000);
   
       // Refresh codes list
-      const codesResponse = await fetch("/api/code");
+      const codesResponse = await fetch("/api/code", {
+        headers: {
+          "x-auth-code": adminCode
+        }
+      });
       const codesData = await codesResponse.json();
       setCodes(codesData);
     } catch (error) {
       setError("Došlo k chybě");
+    }
+  };
+
+  const handleDeleteCode = async (id: string, codeValue: string) => {
+    try {
+      if (!confirm("Opravdu chcete smazat kód " + codeValue + "? Toto také smaže hlasy provedené tímto kódem.")) {
+        setSuccess("Akce byla úspěšně zrušena.");
+        setTimeout(() => setSuccess(""), 2000);
+        return;
+      }
+
+      const adminCode = localStorage.getItem('adminCode');
+      if (!adminCode) {
+        router.push('/');
+        return;
+      }
+
+      const response = await fetch(`/api/code/${id}`, {
+        method: "DELETE",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-auth-code": adminCode
+        }
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        setError(data.error || 'Failed to delete code');
+        return;
+      }
+
+      const codesResponse = await fetch("/api/code", {
+        headers: {
+          "x-auth-code": adminCode
+        }
+      });
+      const codesData = await codesResponse.json();
+      setCodes(codesData);
+      setSuccess("Kód byl úspěšně smazán!");
+      setError("");
+      setTimeout(() => setSuccess(""), 2000);
+    } catch (error) {
+      setError("Nepodařilo se smazat kód");
     }
   };
 
@@ -333,7 +419,7 @@ export default function AdminPage() {
                 <div>
                   <h3 className="font-bold">{project.name}</h3>
                   {project.description && <p className="text-sm opacity-70">{project.description}</p>}
-                  <p className="text-sm">Votes: {project._count.votes}</p>
+                  <p className="text-xs">Hlasů: <a className="font-bold text-base">{project._count.votes}</a></p>
                 </div>
                 <button
                   onClick={() => handleDeleteProject(project.id)}
@@ -406,7 +492,7 @@ export default function AdminPage() {
 
           <div className="space-y-2">
             {[...codes]
-              .filter(code => code.code !== "ADMIN")
+              .filter(code => code.isAdmin === false)
               .sort((a, b) => (a.disabled === b.disabled ? 0 : a.disabled ? 1 : -1))
               .map((code) => (
               <div
@@ -414,39 +500,71 @@ export default function AdminPage() {
                 className={`p-2 rounded ${code.disabled ? 'bg-gray-500/20' : 'bg-white/5'} flex justify-between items-center`}
               >
                 <code>{code.code}</code>
-                {code.disabled ? (
-                  <span className="ml-2 text-sm opacity-70">(Použito)</span>
-                ) : (
-                  <button
-                    onClick={() => {
-                      fetch(`/api/code/${code.id}`, {
-                        method: "PATCH",
-                        headers: { 
-                          "Content-Type": "application/json",
-                          "x-auth-code": localStorage.getItem('adminCode') || ''
-                        },
-                        body: JSON.stringify({ disabled: true }),
-                      }).then(async (response) => {
-                        if (!response.ok) {
-                          const data = await response.json();
-                          setError(data.error);
-                          return;
+                <div className="flex items-center gap-2">
+                  {code.disabled ? (
+                    <span className="ml-2 text-sm opacity-70">(Použito)</span>
+                  ) : (
+                    <button
+                      onClick={async () => {
+                        try {
+                          const adminCode = localStorage.getItem('adminCode');
+                          if (!adminCode) {
+                            router.push('/');
+                            return;
+                          }
+
+                          const response = await fetch(`/api/code/${code.id}`, {
+                            method: "PATCH",
+                            headers: { 
+                              "Content-Type": "application/json",
+                              "x-auth-code": adminCode
+                            },
+                            body: JSON.stringify({ disabled: true }),
+                          });
+
+                          if (!response.ok) {
+                            const data = await response.json();
+                            setError(data.error || 'Failed to mark code as used');
+                            return;
+                          }
+
+                          const codesResponse = await fetch("/api/code", {
+                            headers: {
+                              "x-auth-code": adminCode
+                            }
+                          });
+                          
+                          if (!codesResponse.ok) {
+                            const data = await codesResponse.json();
+                            setError(data.error || 'Failed to refresh codes');
+                            return;
+                          }
+
+                          const codesData = await codesResponse.json();
+                          if (Array.isArray(codesData)) {
+                            setCodes(codesData);
+                            setSuccess("Code marked as used!");
+                            setError("");
+                            setTimeout(() => setSuccess(""), 2000);
+                          } else {
+                            setError("Invalid response format from server");
+                          }
+                        } catch (error) {
+                          setError("Failed to mark code as used");
                         }
-                        const codesResponse = await fetch("/api/code");
-                        const codesData = await codesResponse.json();
-                        setCodes(codesData);
-                        setSuccess("Code marked as used!");
-                        setError("");
-                        setTimeout(() => setSuccess(""), 2000);
-                      }).catch(() => {
-                        setError("Failed to mark code as used");
-                      });
-                    }}
-                    className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm"
+                      }}
+                      className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm"
+                    >
+                      Označit jako použitý
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleDeleteCode(code.id, code.code)}
+                    className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
                   >
-                    Označit jako použitý
+                    Smazat
                   </button>
-                )}
+                </div>
               </div>
             ))}
           </div>

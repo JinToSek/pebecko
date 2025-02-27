@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Image from "next/image";
 
 const loginSchema = z.object({
-  code: z.string().min(1, "Kód je povinný"),
+  code: z.string().min(1, "Prosím, vyplňte kód"),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
@@ -33,6 +33,7 @@ export default function Home() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [selectedCount, setSelectedCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
 
   const loginForm = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -42,16 +43,15 @@ export default function Home() {
     resolver: zodResolver(voteSchema),
   });
 
-  const handleProjectSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const checked = event.target.checked;
-    setSelectedCount(prev => checked ? prev + 1 : prev - 1);
-  };
-
   const handleLogin = async (data: LoginForm) => {
+    setIsLoading(true);
     try {
       const response = await fetch("/api/code", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-auth-code": data.code
+        },
         body: JSON.stringify(data),
       });
 
@@ -59,6 +59,7 @@ export default function Home() {
 
       if (!response.ok) {
         setError(result.error);
+        setIsLoading(false);
         return;
       }
 
@@ -75,6 +76,7 @@ export default function Home() {
       // Fetch projects
       const projectsResponse = await fetch("/api/project", {
         headers: {
+          'Content-Type': 'application/json',
           'x-auth-code': loginForm.getValues("code")
         }
       });
@@ -83,16 +85,24 @@ export default function Home() {
 
       // If admin, fetch codes
       if (result.isAdmin) {
-        const codesResponse = await fetch("/api/code");
+        const codesResponse = await fetch("/api/code", {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-auth-code': loginForm.getValues("code")
+          }
+        });
         const codesData = await codesResponse.json();
         setCodes(codesData);
       }
     } catch (error) {
-      setError("Došlo k chybě");
-    }
+      setError("Došlo k chybě při ověřování kódu");
+    } finally {
+      setIsLoading(false);
+    } 
   };
 
   const handleVote = async (data: VoteForm) => {
+    setIsLoading(true);
     try {
       const response = await fetch("/api/code", {
         method: "PUT",
@@ -113,121 +123,27 @@ export default function Home() {
         return;
       }
 
-      setSuccess("Hlas byl úspěšně odeslán!");
+      setSuccess("Váš hlas byl úspěšně zaznamenán!");
       setError("");
+      setSelectedCount(0);
       setTimeout(() => {
         setIsLoggedIn(false);
         setSuccess("");
         loginForm.reset();
         voteForm.reset();
-      }, 2000);
+      }, 10_000);
     } catch (error) {
-      setError("Došlo k chybě");
+      setError("Došlo k chybě při odesílání hlasu");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const createProject = async (name: string, description?: string) => {
-    try {
-      const response = await fetch("/api/project", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, description }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        setError(error.message);
-        return;
-      }
-
-      const projectsResponse = await fetch("/api/project", {
-        headers: {
-          'x-auth-code': loginForm.getValues("code")
-        }
-      });
-      const projectsData = await projectsResponse.json();
-      setProjects(projectsData);
-      setError("");
-    } catch (error) {
-      setError("Došlo k chybě");
-    }
+  const handleProjectSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = event.target.checked;
+    const projectIds = voteForm.getValues("projectIds") || [];
+    setSelectedCount(projectIds.length + (checked ? 1 : -1));
   };
-
-  const createCodes = async (codes: string[]) => {
-    try {
-      const response = await fetch("/api/code", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ codes }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        setError(error.message);
-        return;
-      }
-
-      setError("");
-      setSuccess(`Created ${codes.length} new codes`);
-      setTimeout(() => setSuccess(""), 2000);
-    } catch (error) {
-      setError("Došlo k chybě");
-    }
-  };
-
-  const deleteProject = async (projectId: string) => {
-    try {
-      const response = await fetch(`/api/project/${projectId}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        setError(error.message);
-        return;
-      }
-
-      const projectsResponse = await fetch("/api/project", {
-        headers: {
-          'x-auth-code': loginForm.getValues("code")
-        }
-      });
-      const projectsData = await projectsResponse.json();
-      setProjects(projectsData);
-      setError("");
-      setSuccess("Project deleted successfully");
-      setTimeout(() => setSuccess(""), 2000);
-    } catch (error) {
-      setError("Došlo k chybě");
-    }
-  };
-
-  const disableCode = async (codeId: string) => {
-    try {
-      const response = await fetch(`/api/code/${codeId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ disabled: true }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        setError(error.message);
-        return;
-      }
-
-      const codesResponse = await fetch("/api/code");
-      const codesData = await codesResponse.json();
-      setCodes(codesData);
-      setError("");
-      setSuccess("Code disabled successfully");
-      setTimeout(() => setSuccess(""), 2000);
-    } catch (error) {
-      setError("Došlo k chybě");
-    }
-  };
-
-
 
   if (!isLoggedIn) {
     return (
@@ -247,14 +163,22 @@ export default function Home() {
                 {...loginForm.register("code")}
                 className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Zadejte svůj kód"
+                disabled={isLoading}
               />
             </div>
             {error && <p className="text-red-500 text-sm">{error}</p>}
             <button
               type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isLoading}
             >
-              Potvrdit
+              {isLoading ? (
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : null}
+              {isLoading ? "Načítání..." : "Potvrdit"}
             </button>
           </form>
         </div>
@@ -265,183 +189,7 @@ export default function Home() {
   if (isAdmin) {
     return (
       <div className="min-h-screen p-8 bg-black">
-        <div className="max-w-6xl mx-auto space-y-8">
-          <h1 className="text-3xl font-bold text-white">Administrátorský panel</h1>
-          
-          {/* Projects section
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900">Projects</h2>
-            <div className="space-y-4">
-              {projects.map((project) => (
-                <div
-                  key={project.id}
-                  className="flex items-center justify-between p-4 border rounded bg-white"
-                >
-                  <div>
-                    <h3 className="font-medium text-gray-900">{project.name}</h3>
-                    {project.description && (
-                      <p className="text-gray-600">{project.description}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <span className="font-medium text-gray-900">{project._count.votes}</span>
-                      <span className="text-gray-600"> votes</span>
-                    </div>
-                    <button
-                      onClick={() => deleteProject(project.id)}
-                      className="px-3 py-1 text-sm text-red-600 hover:text-red-800"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900">Active Codes</h2>
-            <div className="space-y-4">
-              {codes.filter(code => !code.disabled).map((code) => (
-                <div
-                  key={code.id}
-                  className="flex items-center justify-between p-4 border rounded bg-white"
-                >
-                  <span className="font-medium text-gray-900">{code.code}</span>
-                  <button
-                    onClick={() => disableCode(code.id)}
-                    className="px-3 py-1 text-sm text-red-600 hover:text-red-800"
-                  >
-                    Disable
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900">Create New Project</h2>
-            <div className="flex gap-4">
-              <input
-                type="text"
-                placeholder="Project name"
-                className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-gray-900"
-                id="newProjectName"
-              />
-              <input
-                type="text"
-                placeholder="Description (optional)"
-                className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-gray-900"
-                id="newProjectDescription"
-              />
-              <button
-                onClick={() => {
-                  const name = (document.getElementById("newProjectName") as HTMLInputElement).value;
-                  const description = (document.getElementById("newProjectDescription") as HTMLInputElement).value;
-                  if (name) createProject(name, description || undefined);
-                }}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-              >
-                Create
-              </button>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow space-y-6">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900">Create Codes</h2>
-            
-            <div className="space-y-4">
-              <h3 className="font-medium text-gray-900">Manual Input</h3>
-              <div className="flex gap-4">
-                <input
-                  type="text"
-                  placeholder="Enter codes separated by commas"
-                  className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-gray-900"
-                  id="newCodes"
-                />        const blob = new Blob([codes.join("\n")], { type: "text/plain" });
-                          const url = window.URL.createObjectURL(blob);
-                          const a = document.createElement("a");
-                          a.href = url;
-                          a.download = "generated-codes.txt";
-                          document.body.appendChild(a);
-                          a.click();
-                          window.URL.revokeObjectURL(url);
-                          document.body.removeChild(a);
-                      
-                          setError("");
-                          setSuccess(`Generated ${count} codes and downloaded`);
-                          setTimeout(() => setSuccess(""), 2000);
-                      
-                          // Refresh codes list
-                          const codesResponse = await fetch("/api/code");
-                          const codesData = await codesResponse.json();
-                          setCodes(codesData);
-                        } catch (error) {
-                          setError("Došlo k chybě");
-                        }
-                      };
-                      generateCodes(count);
-                    }
-                  
-                <button
-                  onClick={() => {
-                    const codesInput = (document.getElementById("newCodes") as HTMLInputElement).value;
-                    const codes = codesInput.split(",").map((code) => code.trim()).filter(Boolean);
-                    if (codes.length > 0) createCodes(codes);
-                  }}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-                >
-                  Create
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="font-medium text-gray-900">Auto Generate</h3>
-              <div className="flex gap-4">
-                <input
-                  type="number"
-                  min="1"
-                  placeholder="Number of codes to generate"
-                  className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-gray-900"
-                  id="codeCount"
-                />
-                <button
-                  onClick={() => {
-                    const count = parseInt((document.getElementById("codeCount") as HTMLInputElement).value);
-                    if (count > 0) generateCodes(count);
-                  }}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-                >
-                  Generate
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900">Used Codes</h2>
-            <div className="space-y-4">
-              {codes.filter(code => code.disabled).map((code) => (
-                <div
-                  key={code.id}
-                  className="flex items-center justify-between p-4 border rounded bg-white"
-                >
-                  <span className="font-medium text-gray-900">{code.code}</span>
-                  <span className="text-gray-600">Used</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {(error || success) && (
-            <div className={`p-4 rounded ${error ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
-              {error || success}
-            </div>
-          )}
-            */}
-        </div>
+        <h1>Načítání...</h1>
       </div>
     );
   }
@@ -474,13 +222,34 @@ export default function Home() {
             ))}
           </div>
           {error && <p className="text-red-500">{error}</p>}
-          {success && <p className="text-green-500">{success}</p>}
+          {success && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full text-center">
+                <svg className="mx-auto h-12 w-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <h3 className="mt-4 text-lg font-medium text-gray-900">Děkujeme za váš hlas!</h3>
+                <p className="mt-2 text-sm text-gray-600">{success}</p>
+              </div>
+            </div>
+          )}
           {selectedCount > 0 && selectedCount <= 3 && (
             <button
               type="submit"
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              disabled={isLoading}
+              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Odeslat hlas
+              {isLoading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Odesílání...
+                </>
+              ) : (
+                "Odeslat hlas"
+              )}
             </button>
           )}
         </form>
