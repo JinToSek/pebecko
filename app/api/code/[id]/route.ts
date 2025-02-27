@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { authenticateAdmin } from '../../middleware';
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, context: { params: { id: string } }) {
   // Authenticate admin
   const authResult = await authenticateAdmin(req);
   if (authResult) {
@@ -10,7 +10,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   }
 
   try {
-    const { id } = params;
+    const { id } = context.params;
 
     // Delete all votes associated with this code first
     await prisma.vote.deleteMany({

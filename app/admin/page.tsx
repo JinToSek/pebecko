@@ -444,9 +444,6 @@ export default function AdminPage() {
               </label>
               <textarea
                 id="description"
-                Mark
-                as
-                Used
                 className="w-full p-2 rounded bg-white/10"
               />
             </div>
