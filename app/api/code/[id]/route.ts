@@ -4,7 +4,7 @@ import { authenticateAdmin } from "../../middleware";
 
 export async function DELETE(
   req: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
   // Authenticate admin
   const authResult = await authenticateAdmin(req);
@@ -13,7 +13,7 @@ export async function DELETE(
   }
 
   try {
-    const { id } = context.params;
+    const { id } = params;
 
     // Delete all votes associated with this code first
     await prisma.vote.deleteMany({
@@ -36,7 +36,7 @@ export async function DELETE(
 
 export async function PATCH(
   req: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
   // Authenticate admin
   const authResult = await authenticateAdmin(req);
@@ -45,7 +45,7 @@ export async function PATCH(
   }
 
   try {
-    const { id } = context.params;
+    const { id } = params;
     const { disabled } = await req.json();
 
     const updatedCode = await prisma.code.update({
