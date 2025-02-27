@@ -34,14 +34,22 @@ export default function AdminPage() {
         }
 
         // Verify if the code has admin privileges
-        const verifyResponse = await fetch("/api/code", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-auth-code": code,
-          },
-          body: JSON.stringify({ code }),
-        });
+        let verifyResponse;
+        try {
+          verifyResponse = await fetch("/api/code", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-auth-code": code,
+            },
+            body: JSON.stringify({ code }),
+          });
+        } catch (networkError) {
+          console.error("Network error during verification:", networkError);
+          throw new Error(
+            "Nelze se připojit k serveru. Zkontrolujte své připojení k internetu."
+          );
+        }
 
         if (!verifyResponse.ok) {
           const errorData = await verifyResponse.json();
@@ -57,48 +65,77 @@ export default function AdminPage() {
           return;
         }
 
-        // Fetch projects and codes
-        const [projectsResponse, codesResponse] = await Promise.all([
-          fetch("/api/project", {
-            headers: {
-              "Content-Type": "application/json",
-              "x-auth-code": code,
-            },
-          }),
-          fetch("/api/code", {
-            headers: {
-              "Content-Type": "application/json",
-              "x-auth-code": code,
-            },
-          }),
-        ]);
+        // Fetch projects and codes separately with better error handling
+        let projectsData = [];
+        let codesData = [];
 
-        if (!projectsResponse.ok || !codesResponse.ok) {
-          let errorMessage = "Failed to fetch data";
-          try {
-            if (!projectsResponse.ok) {
-              const projectError = await projectsResponse.json();
-              errorMessage = projectError.error || errorMessage;
-            }
-            if (!codesResponse.ok) {
-              const codeError = await codesResponse.json();
-              errorMessage = codeError.error || errorMessage;
-            }
-          } catch (e) {
-            console.error("Error parsing response:", e);
+        // Fetch projects
+        try {
+          const projectsResponse = await fetch("/api/project", {
+            headers: {
+              "Content-Type": "application/json",
+              "x-auth-code": code,
+            },
+          });
+
+          if (!projectsResponse.ok) {
+            const projectError = await projectsResponse.json();
+            console.error("Project fetch error:", projectError);
+            throw new Error(
+              projectError.error ||
+                `Failed to fetch projects: ${projectsResponse.status}`
+            );
           }
-          throw new Error(errorMessage);
+
+          const data = await projectsResponse.json();
+          projectsData = Array.isArray(data) ? data : [];
+        } catch (projectError) {
+          console.error("Error fetching projects:", projectError);
+          throw new Error(
+            projectError instanceof Error
+              ? projectError.message
+              : "Failed to fetch projects data"
+          );
         }
 
-        const projectsData = await projectsResponse.json();
-        const codesData = await codesResponse.json();
+        // Fetch codes
+        try {
+          const codesResponse = await fetch("/api/code", {
+            headers: {
+              "Content-Type": "application/json",
+              "x-auth-code": code,
+            },
+          });
+
+          if (!codesResponse.ok) {
+            const codeError = await codesResponse.json();
+            console.error("Code fetch error:", codeError);
+            throw new Error(
+              codeError.error ||
+                `Failed to fetch codes: ${codesResponse.status}`
+            );
+          }
+
+          const data = await codesResponse.json();
+          codesData = Array.isArray(data) ? data : [];
+        } catch (codeError) {
+          console.error("Error fetching codes:", codeError);
+          throw new Error(
+            codeError instanceof Error
+              ? codeError.message
+              : "Failed to fetch codes data"
+          );
+        }
 
         setProjects(projectsData);
         setCodes(codesData);
       } catch (error: any) {
+        console.error("Admin data fetch error:", error);
         setError(
-          "Nepodařilo se načíst administrátorská data: " + error.toString()
+          "Nepodařilo se načíst administrátorská data: " +
+            (error.message || error.toString())
         );
+        // Uncomment if you want to redirect on error
         // router.push('/');
       }
     };
@@ -584,6 +621,15 @@ export default function AdminPage() {
                       <button
                         onClick={async () => {
                           try {
+                            if (
+                              !confirm(
+                                "Opravdu chcete označit tento kód jako použitý? Tento kód bude znehodnocen a nebude moci být použit znovu."
+                              )
+                            ) {
+                              setSuccess("Akce byla úspěšně zrušena.");
+                              setTimeout(() => setSuccess(""), 2000);
+                              return;
+                            }
                             const adminCode = localStorage.getItem("adminCode");
                             if (!adminCode) {
                               router.push("/");
@@ -625,7 +671,9 @@ export default function AdminPage() {
                             const codesData = await codesResponse.json();
                             if (Array.isArray(codesData)) {
                               setCodes(codesData);
-                              setSuccess("Code marked as used!");
+                              setSuccess(
+                                "Kód byl úspešně označen jako použitý"
+                              );
                               setError("");
                               setTimeout(() => setSuccess(""), 2000);
                             } else {

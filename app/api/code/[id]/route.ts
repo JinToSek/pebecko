@@ -11,7 +11,7 @@ export async function DELETE(
 
   // Authenticate admin
   const authResult = await authenticateAdmin(req);
-  if (authResult) {
+  if (authResult !== null) {
     return authResult;
   }
 
@@ -44,7 +44,7 @@ export async function PATCH(
 
   // Authenticate admin
   const authResult = await authenticateAdmin(req);
-  if (authResult) {
+  if (authResult !== null) {
     return authResult;
   }
 

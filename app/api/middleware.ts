@@ -18,9 +18,21 @@ export async function authenticateAdmin(req: NextRequest) {
       where: { code },
     });
 
-    if (!codeRecord || codeRecord.disabled) {
+    if (!codeRecord) {
       return NextResponse.json(
-        { error: "Invalid or disabled code" },
+        { error: "Tento kód neexistuje." },
+        { status: 401 }
+      );
+    }
+
+    if (codeRecord.disabled) {
+      return NextResponse.json(
+        {
+          error:
+            "Tento kód už byl použitej. " +
+            "Pokuď je tento kód váš a ještě jste nehlasovali," +
+            " můžete kontaktovat organizaci.",
+        },
         { status: 401 }
       );
     }
@@ -43,8 +55,8 @@ export async function authenticateAdmin(req: NextRequest) {
 }
 
 export async function authenticateUser(req: NextRequest) {
-  const headersList = headers();
-  const code = (await headersList).get("x-auth-code");
+  const headersList = await headers();
+  const code = headersList.get("x-auth-code");
 
   if (!code) return false;
 

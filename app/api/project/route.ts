@@ -4,11 +4,8 @@ import { authenticateAdmin, authenticateUser } from "../middleware";
 
 export async function GET(
   req: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context?: { params?: Promise<{ id?: string }> }
 ) {
-  // Await the params promise
-  const { id } = await context.params;
-
   // Authenticate user
   const authResult = await authenticateUser(req);
   if (!authResult) {
@@ -19,19 +16,39 @@ export async function GET(
   }
 
   try {
-    const project = await prisma.project.findUnique({
-      where: { id },
+    // Check if we have an ID parameter
+    if (context?.params) {
+      const params = await context.params;
+      if (params?.id) {
+        // Fetch a single project by ID
+        const project = await prisma.project.findUnique({
+          where: { id: params.id },
+          include: {
+            _count: {
+              select: { votes: true },
+            },
+          },
+        });
+
+        // Ensure we return a valid JSON object even if project is null
+        return NextResponse.json(project || { error: "Project not found" });
+      }
+    }
+
+    // If no ID is provided, fetch all projects
+    const projects = await prisma.project.findMany({
       include: {
         _count: {
           select: { votes: true },
         },
       },
     });
-    return NextResponse.json(project);
+    // Ensure we return a valid JSON array even if projects is empty
+    return NextResponse.json(projects || []);
   } catch (error) {
-    console.error("Error fetching project:", error);
+    console.error("Error fetching project(s):", error);
     return NextResponse.json(
-      { error: "Failed to fetch project" },
+      { error: "Failed to fetch project data" },
       { status: 500 }
     );
   }
@@ -40,11 +57,8 @@ export async function GET(
 export async function POST(req: NextRequest) {
   // Authenticate admin
   const authResult = await authenticateAdmin(req);
-  if (!authResult) {
-    return NextResponse.json(
-      { error: "Admin authentication required" },
-      { status: 401 }
-    );
+  if (authResult !== null) {
+    return authResult;
   }
 
   try {
@@ -70,11 +84,8 @@ export async function DELETE(
 ) {
   // Authenticate admin
   const authResult = await authenticateAdmin(req);
-  if (!authResult) {
-    return NextResponse.json(
-      { error: "Admin authentication required" },
-      { status: 401 }
-    );
+  if (authResult !== null) {
+    return authResult;
   }
 
   try {

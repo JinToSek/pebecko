@@ -4,11 +4,8 @@ import { authenticateAdmin } from "../middleware";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context?: { params?: Promise<{ id?: string }> }
 ) {
-  // Await the params to resolve the Promise
-  const { id } = await params;
-
   // Authenticate admin
   const authResult = await authenticateAdmin(req);
   if (authResult !== null) {
@@ -16,9 +13,23 @@ export async function GET(
   }
 
   try {
+    // Check if we have an ID parameter
+    if (context?.params) {
+      const params = await context.params;
+      if (params?.id) {
+        // Fetch a single code by ID
+        const code = await prisma.code.findUnique({
+          where: { id: params.id },
+        });
+        return NextResponse.json(code || { error: "Code not found" });
+      }
+    }
+
+    // If no ID is provided, fetch all codes
     const codes = await prisma.code.findMany();
     return NextResponse.json(codes);
   } catch (error) {
+    console.error("Error fetching code(s):", error);
     return NextResponse.json(
       { error: "Failed to fetch codes" },
       { status: 500 }
@@ -38,9 +49,21 @@ export async function POST(req: NextRequest) {
       where: { code },
     });
 
-    if (!codeRecord || codeRecord.disabled) {
+    if (!codeRecord) {
       return NextResponse.json(
-        { error: "Invalid or disabled code" },
+        { error: "Tento kód neexistuje." },
+        { status: 401 }
+      );
+    }
+
+    if (codeRecord.disabled) {
+      return NextResponse.json(
+        {
+          error:
+            "Tento kód už byl použitej. " +
+            "Pokuď je tento kód váš a ještě jste nehlasovali," +
+            " můžete kontaktovat organizaci.",
+        },
         { status: 401 }
       );
     }
@@ -57,7 +80,7 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   // Authenticate admin
   const authResult = await authenticateAdmin(req);
-  if (authResult) {
+  if (authResult !== null) {
     return authResult;
   }
 
@@ -124,9 +147,21 @@ export async function PUT(req: NextRequest) {
       include: { votes: true },
     });
 
-    if (!codeRecord || codeRecord.disabled) {
+    if (!codeRecord) {
       return NextResponse.json(
-        { error: "Invalid or disabled code" },
+        { error: "Tento kód neexistuje." },
+        { status: 401 }
+      );
+    }
+
+    if (codeRecord.disabled) {
+      return NextResponse.json(
+        {
+          error:
+            "Tento kód už byl použitej. " +
+            "Pokuď je tento kód váš a ještě jste nehlasovali," +
+            " můžete kontaktovat organizaci.",
+        },
         { status: 401 }
       );
     }
@@ -166,7 +201,7 @@ export async function PUT(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   // Authenticate admin
   const authResult = await authenticateAdmin(req);
-  if (authResult) {
+  if (authResult !== null) {
     return authResult;
   }
 

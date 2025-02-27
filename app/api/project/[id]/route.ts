@@ -2,15 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { authenticateAdmin } from "../../middleware";
 
-type Params = Promise<{ id: string }>
+type Params = Promise<{ id: string }>;
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Params }
-) {
+export async function DELETE(req: NextRequest, { params }: { params: Params }) {
   // Authenticate admin
   const authResult = await authenticateAdmin(req);
-  if (authResult) {
+  if (authResult !== null) {
     return authResult;
   }
 
