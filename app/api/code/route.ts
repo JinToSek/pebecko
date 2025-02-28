@@ -4,9 +4,10 @@ import { authenticateAdmin } from "../middleware";
 
 export async function GET(
   req: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id?: string }> }
 ) {
-  const { id } = await context.params;
+  const params = await context.params;
+  const id = params?.id;
   // Authenticate admin
   const authResult = await authenticateAdmin(req);
   if (authResult !== null) {
@@ -16,13 +17,11 @@ export async function GET(
   try {
     // Check if we have an ID parameter
     if (id) {
-      if (id) {
-        // Fetch a single code by ID
-        const code = await prisma.code.findUnique({
-          where: { id: id },
-        });
-        return NextResponse.json(code || { error: "Code not found" });
-      }
+      // Fetch a single code by ID
+      const code = await prisma.code.findUnique({
+        where: { id: id },
+      });
+      return NextResponse.json(code || { error: "Code not found" });
     }
 
     // If no ID is provided, fetch all codes

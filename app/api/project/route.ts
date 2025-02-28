@@ -4,9 +4,10 @@ import { authenticateAdmin, authenticateUser } from "../middleware";
 
 export async function GET(
   req: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id?: string }> }
 ) {
-  const { id } = await context.params;
+  const params = await context.params;
+  const id = params?.id;
   // Authenticate user
   const authResult = await authenticateUser(req);
   if (!authResult) {
@@ -19,20 +20,18 @@ export async function GET(
   try {
     // Check if we have an ID parameter
     if (id) {
-      if (id) {
-        // Fetch a single project by ID
-        const project = await prisma.project.findUnique({
-          where: { id: id },
-          include: {
-            _count: {
-              select: { votes: true },
-            },
+      // Fetch a single project by ID
+      const project = await prisma.project.findUnique({
+        where: { id: id },
+        include: {
+          _count: {
+            select: { votes: true },
           },
-        });
+        },
+      });
 
-        // Ensure we return a valid JSON object even if project is null
-        return NextResponse.json(project || { error: "Project not found" });
-      }
+      // Ensure we return a valid JSON object even if project is null
+      return NextResponse.json(project || { error: "Project not found" });
     }
 
     // If no ID is provided, fetch all projects
