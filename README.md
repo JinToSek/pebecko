@@ -1,36 +1,27 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OpenDecision
+Moderní alternativa decision21.cz, vytvořená pomocí NextJS a databází od Prismy.
+Zdarma. OpenSource.
 
-## Getting Started
+Autor: JinSeK a podporovatelé
 
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Instalace:
+### 1. fork/dupublikujte toto repo
+### 3. vercel
+https://vercel.com/
+Vytvořte projekt, vyberte repo, které jste duplikovali
+### 4. prisma
+https://prisma.io/ pro databáze
+potřebujete jen URL pro databázi
+### 5. nastavit ENV na Vercel:
+ENV
+```env
+DATABASE_URL="prisma+postgres://accelerate.prisma-data.net/?api_key=ZmenToto"
 ```
+URL jste si vygenerovali v předchozím kroku
+### 6. Framework Settings
+Na vercelu: Framework Settings
+Build command změnit na "prisma generate --no-engine && next build"
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+To je vše, feel free to contribute to this project and make sure to give it a star if you like it.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Vytvořeno pomocí: Prisma.io databáze (není to zrovna nejrychlejší db co si budem :/ "Funguje to - tak to nech být") a NextJS
