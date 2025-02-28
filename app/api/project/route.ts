@@ -77,29 +77,4 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function DELETE(
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
-  // Authenticate admin
-  const authResult = await authenticateAdmin(req);
-  if (authResult !== null) {
-    return authResult;
-  }
-
-  try {
-    const { id } = await context.params;
-
-    await prisma.project.delete({
-      where: { id },
-    });
-
-    return NextResponse.json({ message: "Project deleted successfully" });
-  } catch (error) {
-    console.error("Error deleting project:", error);
-    return NextResponse.json(
-      { error: "Failed to delete project" },
-      { status: 500 }
-    );
-  }
-}
+// DELETE functionality is handled in [id]/route.ts

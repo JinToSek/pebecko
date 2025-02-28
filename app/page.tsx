@@ -13,7 +13,10 @@ const loginSchema = z.object({
 type LoginForm = z.infer<typeof loginSchema>;
 
 const voteSchema = z.object({
-  projectIds: z.array(z.string()).min(1, "Vyberte alespoň 1 projekt").max(3, "Můžete vybrat maximálně 3 projekty"),
+  projectIds: z
+    .array(z.string())
+    .min(1, "Vyberte alespoň 1 projekt")
+    .max(3, "Můžete vybrat maximálně 3 projekty"),
 });
 
 type VoteForm = z.infer<typeof voteSchema>;
@@ -29,7 +32,9 @@ export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [codes, setCodes] = useState<{ id: string; code: string; disabled: boolean }[]>([]);
+  const [codes, setCodes] = useState<
+    { id: string; code: string; disabled: boolean }[]
+  >([]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [selectedCount, setSelectedCount] = useState(0);
@@ -41,16 +46,21 @@ export default function Home() {
 
   const voteForm = useForm<VoteForm>({
     resolver: zodResolver(voteSchema),
+    defaultValues: {
+      projectIds: [],
+    },
   });
 
   const handleLogin = async (data: LoginForm) => {
     setIsLoading(true);
+    setSuccess("");
+    setError("");
     try {
       const response = await fetch("/api/code", {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          "x-auth-code": data.code
+          "x-auth-code": data.code,
         },
         body: JSON.stringify(data),
       });
@@ -68,7 +78,7 @@ export default function Home() {
       setError("");
 
       if (result.isAdmin) {
-        localStorage.setItem('adminCode', loginForm.getValues("code"));
+        localStorage.setItem("adminCode", loginForm.getValues("code"));
         window.location.href = "/admin";
         return;
       }
@@ -76,9 +86,9 @@ export default function Home() {
       // Fetch projects
       const projectsResponse = await fetch("/api/project", {
         headers: {
-          'Content-Type': 'application/json',
-          'x-auth-code': loginForm.getValues("code")
-        }
+          "Content-Type": "application/json",
+          "x-auth-code": loginForm.getValues("code"),
+        },
       });
       const projectsData = await projectsResponse.json();
       setProjects(projectsData);
@@ -87,9 +97,9 @@ export default function Home() {
       if (result.isAdmin) {
         const codesResponse = await fetch("/api/code", {
           headers: {
-            'Content-Type': 'application/json',
-            'x-auth-code': loginForm.getValues("code")
-          }
+            "Content-Type": "application/json",
+            "x-auth-code": loginForm.getValues("code"),
+          },
         });
         const codesData = await codesResponse.json();
         setCodes(codesData);
@@ -98,17 +108,18 @@ export default function Home() {
       setError("Došlo k chybě při ověřování kódu");
     } finally {
       setIsLoading(false);
-    } 
+    }
   };
 
   const handleVote = async (data: VoteForm) => {
+    console.log("handleVote called with data:", data); // Add logging
     setIsLoading(true);
     try {
       const response = await fetch("/api/code", {
         method: "PUT",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          "x-auth-code": loginForm.getValues("code")
+          "x-auth-code": loginForm.getValues("code"),
         },
         body: JSON.stringify({
           code: loginForm.getValues("code"),
@@ -141,10 +152,14 @@ export default function Home() {
 
   const handleProjectSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const checked = event.target.checked;
-    const projectIds = voteForm.getValues("projectIds") || [];
-    setSelectedCount(projectIds.length + (checked ? 1 : -1));
+    const currentProjectIds = voteForm.getValues("projectIds") || [];
+    const newProjectIds = checked
+      ? [...currentProjectIds, event.target.value]
+      : currentProjectIds.filter((id) => id !== event.target.value);
+    voteForm.setValue("projectIds", newProjectIds, { shouldValidate: true });
+    setSelectedCount(newProjectIds.length);
+    console.log("Selected projects:", newProjectIds); // Add logging
   };
-
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
@@ -152,7 +167,10 @@ export default function Home() {
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
             Pébéčko 2025
           </h2>
-          <form onSubmit={loginForm.handleSubmit(handleLogin)} className="mt-8 space-y-6">
+          <form
+            onSubmit={loginForm.handleSubmit(handleLogin)}
+            className="mt-8 space-y-6"
+          >
             <div>
               <label htmlFor="code" className="sr-only">
                 Code
@@ -173,9 +191,25 @@ export default function Home() {
               disabled={isLoading}
             >
               {isLoading ? (
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <svg
+                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
                 </svg>
               ) : null}
               {isLoading ? "Načítání..." : "Potvrdit"}
@@ -197,8 +231,13 @@ export default function Home() {
   return (
     <div className="min-h-screen p-8 bg-black">
       <div className="max-w-2xl mx-auto space-y-8">
-        <h1 className="text-3xl font-bold text-center text-white">Hlasování pro projekty</h1>
-        <form onSubmit={voteForm.handleSubmit(handleVote)} className="space-y-6">
+        <h1 className="text-3xl font-bold text-center text-white">
+          Hlasování pro projekty
+        </h1>
+        <form
+          onSubmit={voteForm.handleSubmit(handleVote)}
+          className="space-y-6"
+        >
           <div className="space-y-4">
             {projects.map((project) => (
               <label
@@ -225,10 +264,22 @@ export default function Home() {
           {success && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full text-center">
-                <svg className="mx-auto h-12 w-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                <svg
+                  className="mx-auto h-12 w-12 text-green-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
-                <h3 className="mt-4 text-lg font-medium text-gray-900">Děkujeme za váš hlas!</h3>
+                <h3 className="mt-4 text-lg font-medium text-gray-900">
+                  Děkujeme za váš hlas!
+                </h3>
                 <p className="mt-2 text-sm text-gray-600">{success}</p>
               </div>
             </div>
@@ -241,9 +292,25 @@ export default function Home() {
             >
               {isLoading ? (
                 <>
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <svg
+                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
                   </svg>
                   Odesílání...
                 </>
@@ -252,6 +319,7 @@ export default function Home() {
               )}
             </button>
           )}
+          {error && <p className="text-red-500 text-sm">{error}</p>}
         </form>
       </div>
     </div>
