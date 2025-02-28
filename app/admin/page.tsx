@@ -444,15 +444,17 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-8">
+    <div className="min-h-screen bg-black text-foreground p-8">
       <h1 className="text-4xl font-bold mb-8">Administrátorský panel</h1>
 
       {error && (
-        <div className="bg-red-100 text-red-700 p-4 rounded mb-4">{error}</div>
+        <div className="bg-red-700 text-white p-4 rounded mb-4">
+          <b>{error}</b>
+        </div>
       )}
       {success && (
-        <div className="bg-green-100 text-green-700 p-4 rounded mb-4">
-          {success}
+        <div className="bg-green-600 text-white p-4 rounded mb-4">
+          <b>{success}</b>
         </div>
       )}
 
