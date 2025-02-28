@@ -27,11 +27,17 @@ export default function AdminPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setSuccess(
+          "Ověřování, zda má uživatel administrativní oprávnění... (1/3)"
+        );
         const code = localStorage.getItem("adminCode");
         if (!code) {
           router.push("/");
           return;
         }
+        setSuccess(
+          "Ověřování, zda má uživatel administrativní oprávnění... (2/3)"
+        );
 
         // Verify if the code has admin privileges
         let verifyResponse;
@@ -51,6 +57,10 @@ export default function AdminPage() {
           );
         }
 
+        setSuccess(
+          "Ověřování, zda má uživatel administrativní oprávnění... (3/3)"
+        );
+
         if (!verifyResponse.ok) {
           const errorData = await verifyResponse.json();
           throw new Error(
@@ -59,16 +69,22 @@ export default function AdminPage() {
           );
         }
 
+        setSuccess(
+          "Ověřeno. Pokuď uživatel nemá administrativní oprávnění, bude poslán zpět na domovskou obrazovku."
+        );
         const verifyResult = await verifyResponse.json();
         if (!verifyResult.isAdmin) {
           router.push("/");
           return;
         }
 
+        setSuccess("Ověřeno.");
+
         // Fetch projects and codes separately with better error handling
         let projectsData = [];
         let codesData = [];
 
+        setSuccess("Začíním načítat data ze serveru... (projekty)");
         // Fetch projects
         try {
           const projectsResponse = await fetch("/api/project", {
@@ -97,6 +113,8 @@ export default function AdminPage() {
               : "Failed to fetch projects data"
           );
         }
+
+        setSuccess("Začíním načítat data ze serveru... (kódy)");
 
         // Fetch codes
         try {
@@ -127,6 +145,8 @@ export default function AdminPage() {
           );
         }
 
+        setSuccess("Data načteny.");
+
         setProjects(projectsData);
         setCodes(codesData);
       } catch (error: any) {
@@ -141,6 +161,7 @@ export default function AdminPage() {
     };
 
     fetchData();
+    setSuccess("");
   }, []);
 
   const handleCreateProject = async (
