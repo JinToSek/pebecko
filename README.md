@@ -25,3 +25,6 @@ Build command změnit na "prisma generate --no-engine && next build"
 To je vše, feel free to contribute to this project and make sure to give it a star if you like it.
 
 Vytvořeno pomocí: Prisma.io databáze (není to zrovna nejrychlejší db co si budem :/ "Funguje to - tak to nech být") a NextJS
+
+
+Pozn. budete muset v Prisma studiu vygenerovat váš admin účet, pro nyní.
