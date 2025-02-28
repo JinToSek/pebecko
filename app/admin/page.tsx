@@ -658,6 +658,18 @@ export default function AdminPage() {
                         .value
                     );
                     if (count > 0) generateCodes(count);
+                    else {
+                      setError("Zadejte platný počet kódů");
+                      (
+                        document.getElementById("codeCount") as HTMLInputElement
+                      ).value = "";
+                      const button = document.querySelector(
+                        'button[type="button"]'
+                      ) as HTMLButtonElement;
+                      button.disabled = true;
+                      button.classList.remove("bg-blue-500");
+                      button.classList.add("bg-gray-500", "cursor-not-allowed");
+                    }
                   }}
                   className="bg-blue-500 text-white px-4 py-2 rounded"
                 >
