@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import Image from "next/image";
 
 const loginSchema = z.object({
   code: z.string().min(1, "Prosím, vyplňte kód"),
@@ -252,10 +251,10 @@ export default function Home() {
                   className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                 />
                 <div className="ml-3">
-                  <h3 className="font-medium text-gray-900">{project.name}</h3>
-                  {project.description && (
-                    <p className="text-gray-600">{project.description}</p>
-                  )}
+                  <h3 className="font-medium text-black">
+                    <b>{project.name}</b>
+                  </h3>
+                  <a className="text-gray-600">{project.description}</a>
                 </div>
               </label>
             ))}
